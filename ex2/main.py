@@ -1,20 +1,29 @@
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate, ChatPromptTemplate, PromptTemplate
 
-llm = ChatOpenAI()
+# greedy
+llm = ChatOpenAI(temperature=0.0, model="gpt-4o")
 
-language = "Spanish"
-text = "Hello, world!"
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are an AI coder that writes Python solutions to user defined problems."),
+    ("user", "{input}")
+])
 
-system_template = f"Translate the following from English into {language}"
-prompt_template = ChatPromptTemplate.from_messages(
-    [("system", system_template), ("user", text)]
-)
+output_parser = StrOutputParser()
 
-prompt = prompt_template.invoke({"language": language, "text": text})
+chain = prompt | llm | output_parser
 
-prompt.to_messages()
+input = """
+    Write a Python program that prints the fibonacci numbers up to 250. 
+    Your entire response must comply with Python syntax as it will be written directly into a new .py file to be compiled by the Python interpreter. 
+    Use double quote symbols (") for comment blocks. 
+    Do not use wrap your code in ```python ```. Assume your entire response is Python code. 
+"""
 
-response = llm.invoke(prompt)
-# print(response)
-print(response.content)
+f = open("sandbox/main.py", "w")
+f.write(chain.invoke(
+    {"input" : input}
+))
+f.close()
+
