@@ -1,0 +1,1 @@
+-top "top_level_tb" -snapshot "sim_snapshot" -timescale "1ns/1ps" -debug "typical" 

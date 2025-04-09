@@ -1,0 +1,18 @@
+#-----------------------------------------------------------
+# xsim v2023.2.2 (64-bit)
+# SW Build 4126759 on Thu Feb  8 23:52:05 MST 2024
+# IP Build 4126054 on Fri Feb  9 11:39:09 MST 2024
+# SharedData Build 4115275 on Tue Jan 30 00:40:57 MST 2024
+# Start of session at: Wed Apr  9 16:34:39 2025
+# Process ID: 48828
+# Current directory: /home/bcheng/workspace/dev/langchain/ex4/hdl/sim_func
+# Command line: xsim -mode tcl -source {xsim.dir/sim_snapshot/xsim_script.tcl}
+# Log file: /home/bcheng/workspace/dev/langchain/ex4/hdl/sim_func/xsim.log
+# Journal file: /home/bcheng/workspace/dev/langchain/ex4/hdl/sim_func/xsim.jou
+# Running On: bcheng-HP, OS: Linux, CPU Frequency: 2650.279 MHz, CPU Physical cores: 4, Host memory: 16397 MB
+#-----------------------------------------------------------
+source xsim.dir/sim_snapshot/xsim_script.tcl
+# xsim {sim_snapshot} -autoloadwcfg
+Time resolution is 1 ps
+exit
+INFO: [Common 17-206] Exiting xsim at Wed Apr  9 16:34:48 2025...
