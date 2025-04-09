@@ -23,7 +23,7 @@ prompt = ChatPromptTemplate.from_messages([
     ("placeholder", "{messages}")
 ])
 
-# Data model
+# Data model (llm structured output, ensures json output with this format)
 class code(BaseModel):
     """Schema for code solutions to questions about LCEL."""
     prefix: str = Field(description="Description of the problem and approach")
@@ -31,7 +31,7 @@ class code(BaseModel):
     code: str = Field(description="Code block not including import statements")
 
 
-output_parser = StrOutputParser()
+# output_parser = StrOutputParser()
 
 # LLM
 code_gen_chain = llm.with_structured_output(code, include_raw=False)
@@ -115,7 +115,11 @@ def generate(state: GraphState):
 
     # Increment
     iterations = iterations + 1
-    return {"generation": code_solution, "messages": messages, "iterations": iterations}
+    return {
+        "generation": code_solution, 
+        "messages": messages, 
+        "iterations": iterations
+    }
 
 
 def code_check(state: GraphState):
@@ -226,5 +230,62 @@ def decide_to_finish(state: GraphState):
     else:
         print("--- DECISION: RE-TRY SOLUTION ---")
         return "generate"
+
+
+
+
+from langgraph.graph import END, StateGraph
+
+# Define the graph
+builder = StateGraph(GraphState)
+
+# Define the nodes
+builder.add_node("generate", generate)
+builder.add_node("check_code", code_check)
+
+# Build graph
+builder.set_entry_point("generate")
+builder.add_edge("generate", "check_code")
+builder.add_conditional_edges(
+    "check_code",
+    decide_to_finish,
+    {
+        "end" : END,
+        "generate" : "generate",
+    }
+)
+
+graph = builder.compile()
+
+
+from langchain_core.messages import HumanMessage
+from pprint import pprint
+
+# kick off graph traversal with an initial state
+graph_events = graph.stream(
+    {
+        "messages" : [HumanMessage(content=question)], 
+        "iterations" : 0
+    }, 
+    stream_mode="values"
+)
+
+# f = open("sandbox/events.txt", "w", encoding="utf-8")
+last_event = None
+for idx, event in enumerate(graph_events):
+    # f.write(f"\n EVENT: {idx}\n")
+    print(f"\n EVENT: {idx}\n")
+    # f.write(str(event))
+    print(str(event))
+    last_event = event
+# f.close()
+
+f = open("sandbox/final_code.py", "w", encoding="utf-8")
+if last_event and "generation" in last_event:
+    code_solution = last_event["generation"]
+    f.write(code_solution.code)
+f.close()
+
+
 
 
