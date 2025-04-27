@@ -1,7 +1,8 @@
-def fibonacci_up_to_250():
+def fibonacci_sequence(limit):
     a, b = 0, 1
-    while a < 250:
+    while a < limit:
         print(a)
         a, b = b, a + b
 
-fibonacci_up_to_250()
+# Call the function with the limit of 250
+fibonacci_sequence(250)
