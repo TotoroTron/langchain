@@ -41,20 +41,30 @@ class GraphState(TypedDict):
 def write_testcase(state: GraphState):
     attempts = state["attempts"]
     messages = state["messages"]
-    print(f"--- ATTEMPT : {attempts} : write_testcase() ---")
-    messages += [
+    print(f"\n\n--- ATTEMPT : {attempts} : write_testcase() ---\n\n")
+    f2 = open("packages.txt", "r")
+    conda_packages = f2.read()
+    test_prompt = messages + [
         (
             "system",
             f"""
             Design cycle: {attempts}
             First, write a unittest TestCase that will be used to verify your solution to the user defined problem. 
+            The testcase must call the solution function. 
+            The testcase must contain the main function. 
             Your entire response will be interpreted as Python code. 
             Adhere to Python syntax and use comment blocks for comments. 
             Do not work on the solution yet. 
+
+            Use only the conda packages as listed below:
+            \n
             """
+            + conda_packages
         )
     ]
-    llm_testcase = llm_testcase_model.invoke(messages)
+
+
+    llm_testcase = llm_testcase_model.invoke(test_prompt)
     messages += [
         (
             "assistant",
@@ -78,7 +88,17 @@ def attempt_solution(state: GraphState):
     attempts = state["attempts"]
     messages = state["messages"]
     attempts = attempts + 1
-    print(f"--- ATTEMPT : {attempts} : attempt_solution() ---")
+    print(f"\n\n--- ATTEMPT : {attempts} : attempt_solution() ---\n\n")
+    messages += [
+    (
+        "system",
+        f"""
+        Design cycle: {attempts}
+        Now implement a Python solution that passes the test case below.
+        Respond _only_ with valid Python code, and comment blocks for explanations.
+        """
+    )
+    ]
     llm_solution = llm_solution_model.invoke(messages)
     os.mkdir(f"src/attempt_{attempts:02d}")
     f = open(f"src/attempt_{attempts:02d}/solution.py", "w")
@@ -101,59 +121,76 @@ def attempt_solution(state: GraphState):
     }
 
 
+import io
+import unittest
+
 def run_test(state: GraphState):
-    attempts = state["attempts"]
-    messages = state["messages"]
+    attempts   = state["attempts"]
+    messages   = state["messages"]
     llm_solution = state["solution"]
     llm_testcase = state["testcase"]
-    print(f"--- ATTEMPT : {attempts} : run_test() ---")
+    print(f"\n\n--- ATTEMPT : {attempts} : run_test() ---\n\n")
 
-    problem_description = llm_solution.problem
-    python_solution = llm_solution.solution
-    python_testcase = llm_testcase.testcase
+    # write out the two files again just in case
+    sol_path = f"src/attempt_{attempts:02d}/solution.py"
+    tc_path  =            "test/test.py"
+    with open(sol_path, "w") as f:
+        f.write(llm_solution.solution)
+    with open(tc_path, "w") as f:
+        f.write(llm_testcase.testcase)
 
-    python_combined = python_solution + "\n" + python_testcase
+    # now load & run the test suite in-memory
+    loader = unittest.TestLoader()
+    suite  = loader.discover("test", pattern="test.py")
 
-    try:
-        exec(python_combined)
-    except Exception as e:
-        f = open(f"src/attempt_{attempts:02d}/error.txt", "w")
-        f.write(str(e))
-        f.close()
-        error_message = [
-            (
-                "system",
-                f"""
-                Design cycle: {attempts}
-                Your solution failed execution with the error: {e}
-                With this new information, retry your solution in the next design cycle attempt. 
-                Your entire response will be interpreted as Python code. 
-                Adhere to Python syntax and use comment blocks for explanations. 
-                """
-            )
-        ]
-        messages += error_message
+    buf     = io.StringIO()
+    runner  = unittest.TextTestRunner(stream=buf, verbosity=2)
+    result  = runner.run(suite)
+    output  = buf.getvalue()
+
+    # record the full test output
+    with open(f"src/attempt_{attempts:02d}/test_output.txt", "w") as out:
+        out.write(output)
+
+    if result.wasSuccessful():
         return {
-            "attempts" : attempts,
-            "messages" : messages,
-            "error" : "yes"
+            "attempts":  attempts,
+            "messages":  messages,
+            "testcase":  llm_testcase,
+            "solution":  llm_solution,
+            "error":     "no"
         }
-
-    return {
-        "attempts" : attempts,
-        "messages" : messages,
-        "error" : "no"
-    }
+    else:
+        # include test failures in the next prompt
+        fail_msg = (
+            "system",
+            f"""
+            Design cycle: {attempts}
+            Your solution failed the unit tests. Here is the output:
+            ```
+            {output}
+            ```
+            Please fix your solution.  Respond _only_ with Python code.
+            """
+        )
+        messages += [fail_msg]
+        return {
+            "attempts":  attempts,
+            "messages":  messages,
+            "testcase":  llm_testcase,
+            "solution":  llm_solution,
+            "error":     "yes"
+        }
 
 def decide_next_node(state: GraphState):
     error_state = state["error"]
     attempts = state["attempts"]
 
     if error_state == "no" or attempts == max_attempts:
-        print("--- DECISION: MAX-ATTEMPTS REACHED. TERMINATING.---")
+        print("\n\n--- DECISION: MAX-ATTEMPTS REACHED. TERMINATING.---\n\n")
         return "end"
     elif error_state == "yes":
-        print("--- DECISION: RE-TRY SOLUTION ---")
+        print("\n\n--- DECISION: RE-TRY SOLUTION ---\n\n")
         return "attempt_solution"
 
 
