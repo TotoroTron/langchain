@@ -1,97 +1,109 @@
-class Evaluator:
-    def __init__(self):
-        # Define supported operators and their precedence
-        self.operators = set('+-*/')
-        self.precedence = {'+': 1, '-': 1, '*': 2, '/': 2}
+# Improved Python expression evaluator
+# Supports binary operators: +, -, *, / (with integer division truncating toward zero)
+# Supports parentheses for defining precedence at arbitrary nesting depth
 
-    def evaluate(self, expression: str) -> int:
-        # Remove all whitespaces from the expression
-        expression = expression.replace(" ", "")
-        nums = []  # Stack for numbers
-        ops = []   # Stack for operators
 
-        def apply_operator():
-            right = nums.pop()
-            left = nums.pop()
-            op = ops.pop()
-            if op == '+':
-                nums.append(left + right)
-            elif op == '-':
-                nums.append(left - right)
-            elif op == '*':
-                nums.append(left * right)
-            elif op == '/':
-                if right == 0:
-                    raise ZeroDivisionError("Division by zero")
-                nums.append(int(left / right))  # Integer division
+class ExpressionEvaluator:
+    def __init__(self, expression: str):
+        self.tokens = []  # A list of tokens from the expression
+        self.current_char = None  # Current character in the expression
+        self.position = -1  # Pointer in the expression
+        self.expression = expression
 
-        def higher_precedence(op1, op2):
-            return self.precedence[op1] >= self.precedence[op2]
+    def advance(self):
+        """Move to the next character in the expression."""
+        self.position += 1
+        if self.position < len(self.expression):
+            self.current_char = self.expression[self.position]
+        else:
+            self.current_char = None
 
-        # Traverse the expression
-        i = 0
-        while i < len(expression):
-            if expression[i].isdigit() or (expression[i] == '-' and (i == 0 or expression[i - 1] == '(')):
-                num = 0
-                sign = -1 if expression[i] == '-' else 1
-                if expression[i] == '-':
-                    i += 1
-                # Build the whole number
-                while i < len(expression) and expression[i].isdigit():
-                    num = num * 10 + int(expression[i])
-                    i += 1
-                nums.append(sign * num)
-                i -= 1
-            elif expression[i] == '(':
-                ops.append(expression[i])
-            elif expression[i] == ')':
-                while ops[-1] != '(':  # Evaluate the subexpression
-                    apply_operator()
-                ops.pop()  # Pop the '('
-            elif expression[i] in self.operators:
-                # If operator at top has greater precedence, apply it first.
-                while (ops and ops[-1] in self.operators and
-                       higher_precedence(ops[-1], expression[i])):
-                    apply_operator()
-                ops.append(expression[i])
+    def skip_whitespace(self):
+        """Skip any whitespace characters."""
+        while self.current_char is not None and self.current_char.isspace():
+            self.advance()
+
+    def parse_integer(self):
+        """Parse an integer from the current position."""
+        num_str = ''
+        while self.current_char is not None and self.current_char.isdigit():
+            num_str += self.current_char
+            self.advance()
+        return int(num_str) if num_str else None
+
+    def tokenize(self):
+        """Convert the expression into a list of tokens."""
+        self.advance()
+        while self.current_char is not None:
+            if self.current_char.isspace():
+                self.skip_whitespace()
+            elif self.current_char.isdigit():
+                self.tokens.append(self.parse_integer())
+            elif self.current_char in "+-*/()":
+                self.tokens.append(self.current_char)
+                self.advance()
             else:
-                raise ValueError("Invalid character")
-            i += 1
+                raise Exception(f"Invalid character: {self.current_char}")
 
-        # Evaluate any remaining expressions
+    def precedence(self, op):
+        """Return the precedence of the operator."""
+        return {"+": 1, "-": 1, "*": 2, "/": 2}.get(op, 0)
+
+    def apply_operator(self, left, right, op):
+        """Evaluate expressions based on the operator."""
+        if op == '+':
+            return left + right
+        elif op == '-':
+            return left - right
+        elif op == '*':
+            return left * right
+        elif op == '/':
+            if right == 0:
+                raise ZeroDivisionError("Division by zero")
+            return int(left / right)  # Integer division
+
+    def evaluate(self):
+        """Evaluate the expression given in tokens."""
+        values = []  # Stack for numbers
+        ops = []  # Stack for operators
+
+        def apply_last_operator():
+            """Apply the last operator to the top two values on the stack."""
+            right = values.pop()
+            left = values.pop()
+            op = ops.pop()
+            values.append(self.apply_operator(left, right, op))
+
+        index = 0
+        while index < len(self.tokens):
+            token = self.tokens[index]
+
+            if isinstance(token, int):
+                values.append(token)
+            elif token == '(': 
+                ops.append(token)
+            elif token == ')':
+                while ops and ops[-1] != '(':  # Resolve until matching '('
+                    apply_last_operator()
+                ops.pop()  # Remove the '('
+            elif token in "+-*/":
+                while ops and self.precedence(ops[-1]) >= self.precedence(token):
+                    apply_last_operator()  # Resolve higher precedence operators
+                ops.append(token)
+
+            index += 1
+
+        # Final resolving of the remaining operators
         while ops:
-            apply_operator()
+            apply_last_operator()
 
-        return nums[0]
+        return values[0] if values else 0
+
+    def compute(self):
+        self.tokenize()
+        return self.evaluate()
+
 
 def evaluate(expression: str) -> int:
-    evaluator = Evaluator()
-    return evaluator.evaluate(expression)
-
-
-# Testing within the code
-if __name__ == "__main__":
-    import unittest
-
-    class TestCalculator(unittest.TestCase):
-
-        def test_simple_expression(self):
-            self.assertEqual(evaluate("3+2*2"), 7)
-
-        def test_whitespace_variants(self):
-            self.assertEqual(evaluate(" 3 /2 "), 1)
-
-        def test_nested_parentheses(self):
-            self.assertEqual(evaluate("(2+3)*(4-1)"), 15)
-
-        def test_division_with_negatives(self):
-            self.assertEqual(evaluate("-7/3"), -2)
-
-        def test_deeply_nested(self):
-            self.assertEqual(evaluate("((1+2)*((3-4)+5))/2"), 3)
-
-        def test_invalid_syntax(self):
-            with self.assertRaises(Exception):
-                evaluate("3 + */ 2")
-
-    unittest.main()
+    evaluator = ExpressionEvaluator(expression)
+    return evaluator.compute()

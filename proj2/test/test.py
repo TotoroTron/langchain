@@ -1,32 +1,35 @@
+# test_calculator.py
 import unittest
-
-# Assuming the evaluate function is located in calculator.py file.
-# from calculator import evaluate
-
-def evaluate(expression):
-    return 0  # Placeholder implementation
-
+from solution import evaluate
 
 class TestCalculator(unittest.TestCase):
-
+    
     def test_simple_expression(self):
-        self.assertEqual(evaluate("3+2*2"), 7, "Should evaluate simple expression using precedence")
+        # Testing simple expression without whitespace
+        self.assertEqual(evaluate("3+2*2"), 7)
 
     def test_whitespace_variants(self):
-        self.assertEqual(evaluate(" 3 /2 "), 1, "Should handle whitespaces and return correct division result")
+        # Testing expression with whitespaces
+        self.assertEqual(evaluate(" 3 /2 "), 1)
 
     def test_nested_parentheses(self):
-        self.assertEqual(evaluate("(2+3)*(4-1)"), 15, "Should accurately evaluate expressions with nested parentheses")
+        # Testing expression with nested parentheses
+        self.assertEqual(evaluate("(2+3)*(4-1)"), 15)
 
     def test_division_with_negatives(self):
-        self.assertEqual(evaluate("-7/3"), -2, "Should truncate towards zero when dividing negative numbers")
+        # Testing division with negative numbers, expect truncation towards zero
+        self.assertEqual(evaluate("-7/3"), -2)
 
-    def test_deeply_nested(self):
-        self.assertEqual(evaluate("((1+2)*((3-4)+5))/2"), 3, "Should handle complex nested arithmetic")
+    def test_deeply_nested_parentheses(self):
+        # Testing deeply nested expression
+        self.assertEqual(evaluate("((1+2)*((3-4)+5))/2"), 6)
 
     def test_invalid_syntax(self):
+        # Testing invalid syntax, expecting exception
         with self.assertRaises(Exception):
-            evaluate("3 + */ 2")  # Example of invalid syntax
+            evaluate("""
+            3 + + 2
+            """)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

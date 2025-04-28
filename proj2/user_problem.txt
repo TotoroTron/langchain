@@ -32,6 +32,6 @@ Write a unittest.TestCase suite in test/test_calculator.py that covers:
 
     Division with negatives: "-7/3" → -2 (trunc toward zero)
 
-    Deeply nested: "((1+2)*((3-4)+5))/2" → 3
+    Deeply nested: "((1+2)*((3-4)+5))/2" → 6
 
     Invalid syntax cases (you can assert that they raise an exception)

@@ -1,59 +1,23 @@
-test_deeply_nested (test.TestCalculator.test_deeply_nested) ... FAIL
-test_division_with_negatives (test.TestCalculator.test_division_with_negatives) ... FAIL
-test_invalid_syntax (test.TestCalculator.test_invalid_syntax) ... FAIL
-test_nested_parentheses (test.TestCalculator.test_nested_parentheses) ... FAIL
-test_simple_expression (test.TestCalculator.test_simple_expression) ... FAIL
-test_whitespace_variants (test.TestCalculator.test_whitespace_variants) ... FAIL
-
+E
 ======================================================================
-FAIL: test_deeply_nested (test.TestCalculator.test_deeply_nested)
+ERROR: test (unittest.loader._FailedTest.test)
 ----------------------------------------------------------------------
+ImportError: Failed to import test module: test
 Traceback (most recent call last):
-  File "/home/bcheng/workspace/dev/langchain/proj2/test/test.py", line 25, in test_deeply_nested
-    self.assertEqual(evaluate("((1+2)*((3-4)+5))/2"), 3, "Should handle complex nested arithmetic")
-AssertionError: 0 != 3 : Should handle complex nested arithmetic
+  File "/home/bcheng/workspace/tools/anaconda3/envs/langchain/lib/python3.12/unittest/loader.py", line 394, in _find_test_path
+    module = self._get_module_from_name(name)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/bcheng/workspace/tools/anaconda3/envs/langchain/lib/python3.12/unittest/loader.py", line 337, in _get_module_from_name
+    __import__(name)
+  File "/home/bcheng/workspace/dev/langchain/proj2/test/test.py", line 3, in <module>
+    from solution import evaluate
+  File "/home/bcheng/workspace/dev/langchain/proj2/src/attempt_01/solution.py", line 91
+    while (ops and
+          ^
+SyntaxError: '(' was never closed
 
-======================================================================
-FAIL: test_division_with_negatives (test.TestCalculator.test_division_with_negatives)
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/bcheng/workspace/dev/langchain/proj2/test/test.py", line 22, in test_division_with_negatives
-    self.assertEqual(evaluate("-7/3"), -2, "Should truncate towards zero when dividing negative numbers")
-AssertionError: 0 != -2 : Should truncate towards zero when dividing negative numbers
-
-======================================================================
-FAIL: test_invalid_syntax (test.TestCalculator.test_invalid_syntax)
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/bcheng/workspace/dev/langchain/proj2/test/test.py", line 28, in test_invalid_syntax
-    with self.assertRaises(Exception):
-AssertionError: Exception not raised
-
-======================================================================
-FAIL: test_nested_parentheses (test.TestCalculator.test_nested_parentheses)
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/bcheng/workspace/dev/langchain/proj2/test/test.py", line 19, in test_nested_parentheses
-    self.assertEqual(evaluate("(2+3)*(4-1)"), 15, "Should accurately evaluate expressions with nested parentheses")
-AssertionError: 0 != 15 : Should accurately evaluate expressions with nested parentheses
-
-======================================================================
-FAIL: test_simple_expression (test.TestCalculator.test_simple_expression)
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/bcheng/workspace/dev/langchain/proj2/test/test.py", line 13, in test_simple_expression
-    self.assertEqual(evaluate("3+2*2"), 7, "Should evaluate simple expression using precedence")
-AssertionError: 0 != 7 : Should evaluate simple expression using precedence
-
-======================================================================
-FAIL: test_whitespace_variants (test.TestCalculator.test_whitespace_variants)
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/home/bcheng/workspace/dev/langchain/proj2/test/test.py", line 16, in test_whitespace_variants
-    self.assertEqual(evaluate(" 3 /2 "), 1, "Should handle whitespaces and return correct division result")
-AssertionError: 0 != 1 : Should handle whitespaces and return correct division result
 
 ----------------------------------------------------------------------
-Ran 6 tests in 0.001s
+Ran 1 test in 0.000s
 
-FAILED (failures=6)
+FAILED (errors=1)

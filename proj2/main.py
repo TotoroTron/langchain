@@ -1,4 +1,8 @@
 import os
+import sys
+import io
+import unittest
+import subprocess
 
 
 from langchain_openai import ChatOpenAI
@@ -27,7 +31,7 @@ class solution_model(BaseModel):
 llm = ChatOpenAI(model="gpt-4o")
 llm_testcase_model = llm.with_structured_output(test_model, include_raw=False)
 llm_solution_model = llm.with_structured_output(solution_model, include_raw=False)
-max_attempts = 5
+max_attempts = 4 
 
 
 class GraphState(TypedDict):
@@ -55,11 +59,14 @@ def write_testcase(state: GraphState):
             Your entire response will be interpreted as Python code. 
             Adhere to Python syntax and use comment blocks for comments. 
             Do not work on the solution yet. 
+            Do not import any external libraries. 
 
-            Use only the conda packages as listed below:
-            \n
+            At the top of the file, add:
+                from solution import evaluate
+
+            And make sure every `evaluate(...)` call is syntactically complete (no trailing commas).
+
             """
-            + conda_packages
         )
     ]
 
@@ -121,38 +128,44 @@ def attempt_solution(state: GraphState):
     }
 
 
-import io
-import unittest
 
 def run_test(state: GraphState):
-    attempts   = state["attempts"]
-    messages   = state["messages"]
+    attempts     = state["attempts"]
+    messages     = state["messages"]
     llm_solution = state["solution"]
     llm_testcase = state["testcase"]
     print(f"\n\n--- ATTEMPT : {attempts} : run_test() ---\n\n")
 
-    # write out the two files again just in case
-    sol_path = f"src/attempt_{attempts:02d}/solution.py"
-    tc_path  =            "test/test.py"
+    # rewrite solution & test files
+    sol_dir = f"src/attempt_{attempts:02d}"
+    os.makedirs(sol_dir, exist_ok=True)
+    sol_path = os.path.join(sol_dir, "solution.py")
+    tc_path  = "test/test.py"
+
     with open(sol_path, "w") as f:
         f.write(llm_solution.solution)
     with open(tc_path, "w") as f:
         f.write(llm_testcase.testcase)
 
-    # now load & run the test suite in-memory
-    loader = unittest.TestLoader()
-    suite  = loader.discover("test", pattern="test.py")
+    # ensure Python can import our solution from the test folder
+    env = os.environ.copy()
+    env["PYTHONPATH"] = sol_dir + os.pathsep + env.get("PYTHONPATH", "")
 
-    buf     = io.StringIO()
-    runner  = unittest.TextTestRunner(stream=buf, verbosity=2)
-    result  = runner.run(suite)
-    output  = buf.getvalue()
+    # invoke the standard unittest discovery
+    proc = subprocess.run(
+        [sys.executable, "-m", "unittest", "discover", "-s", "test", "-p", "test.py"],
+        capture_output=True,
+        text=True,
+        env=env
+    )
+    output = proc.stdout + proc.stderr
 
-    # record the full test output
-    with open(f"src/attempt_{attempts:02d}/test_output.txt", "w") as out:
+    # save the raw output for inspection
+    with open(os.path.join(sol_dir, "test_output.txt"), "w") as out:
         out.write(output)
 
-    if result.wasSuccessful():
+    if proc.returncode == 0:
+        # all tests passed
         return {
             "attempts":  attempts,
             "messages":  messages,
@@ -161,16 +174,18 @@ def run_test(state: GraphState):
             "error":     "no"
         }
     else:
-        # include test failures in the next prompt
+        # tests failed—feed the failure log back to the LLM
         fail_msg = (
             "system",
             f"""
             Design cycle: {attempts}
-            Your solution failed the unit tests. Here is the output:
+            Your solution failed the unit tests (exit code {proc.returncode}).  
+            Here is the full test output:
+
             ```
             {output}
             ```
-            Please fix your solution.  Respond _only_ with Python code.
+            Please fix your solution and respond _only_ with updated Python code.
             """
         )
         messages += [fail_msg]
@@ -187,10 +202,13 @@ def decide_next_node(state: GraphState):
     attempts = state["attempts"]
 
     if error_state == "no" or attempts == max_attempts:
-        print("\n\n--- DECISION: MAX-ATTEMPTS REACHED. TERMINATING.---\n\n")
+        if attempts == max_attempts:
+            print("\n\n--- DECISION: MAX-ATTEMPTS REACHED. TERMINATING.---\n\n")
+        else:
+            print("\n\n--- DECISION: NO ERRORS. TERMINATING.---\n\n")
         return "end"
     elif error_state == "yes":
-        print("\n\n--- DECISION: RE-TRY SOLUTION ---\n\n")
+        print("\n\n--- DECISION: ERRORS PRESENT. RE-TRYING SOLUTION ---\n\n")
         return "attempt_solution"
 
 
@@ -236,13 +254,9 @@ initial_state = {
   "error": "yes"
 }
 
-# start the traversal
-for event in graph.stream(initial_state, stream_mode="values"):
-    print(event)
-
-
-
-
+# Traverse the graph
+for ev in graph.stream(initial_state, stream_mode="events"):
+    print(ev)
 
 
 
