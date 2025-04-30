@@ -1,37 +1,27 @@
+
 Problem:
 Implement a Python function
 
-evaluate(expression: str) -> int
+    evaluate(expression: str) -> int
 
-that takes an arithmetic expression string and returns its integer result. Your evaluator must support:
+that takes an arithmetic expression string and returns its integer result. 
 
+Your evaluator must support:
     Non-negative integers
-
     Binary operators +, -, *, / (with integer division truncating toward zero)
-
     Parentheses ( and ) at arbitrary nesting depth
-
     Arbitrary whitespace mixed in
 
 Constraints:
-
     Do not use Python’s built-in eval() (or ast.literal_eval, etc.).
-
     Must correctly handle operator precedence and left-associativity.
-
     Division by zero may raise an exception.
 
 Unit tests:
 Write a unittest.TestCase suite in test/test_calculator.py that covers:
-
     Simple expressions like "3+2*2" → 7
-
     Whitespace variants: " 3 /2 " → 1
-
     Nested parentheses: "(2+3)*(4-1)" → 15
-
     Division with negatives: "-7/3" → -2 (trunc toward zero)
-
     Deeply nested: "((1+2)*((3-4)+5))/2" → 6
-
     Invalid syntax cases (you can assert that they raise an exception)
